@@ -11,89 +11,105 @@ import (
 
 type Request struct {
 	http.Request
+	apitest *Apitest
 }
 
-func NewRequest(method, urlStr string) *Request {
+func NewRequest(method, urlStr string, a *Apitest) *Request {
 
 	http_request, err := http.NewRequest(method, urlStr, strings.NewReader(""))
 	if nil != err {
 		panic(err)
 	}
 
-	return &Request{*http_request}
+	return &Request{*http_request, a}
 
 }
 
-func (this *Request) WithCredentials(api_key, api_secret string) *Request {
+func (r *Request) WithCredentials(api_key, api_secret string) *Request {
 
-	this.Header.Set("Api-Key", api_key)
-	this.Header.Set("Api-Secret", api_secret)
+	r.Header.Set("Api-Key", api_key)
+	r.Header.Set("Api-Secret", api_secret)
 
-	return this
+	return r
 }
 
-func (this *Request) WithCookie(key, value string) *Request {
+func (r *Request) WithCookie(key, value string) *Request {
 
 	c := &http.Cookie{
 		Name:  key,
 		Value: value,
 	}
 
-	this.AddCookie(c)
-	return this
+	r.AddCookie(c)
+	return r
 }
 
-func (this *Request) set_body(body io.Reader) {
+func (r *Request) set_body(body io.Reader) {
 
 	rc, ok := body.(io.ReadCloser)
 	if !ok && body != nil {
 		rc = ioutil.NopCloser(body)
 	}
-	this.Body = rc
+	r.Body = rc
 
 	if body != nil {
 		switch v := body.(type) {
 		case *bytes.Buffer:
-			this.ContentLength = int64(v.Len())
+			r.ContentLength = int64(v.Len())
 		case *bytes.Reader:
-			this.ContentLength = int64(v.Len())
+			r.ContentLength = int64(v.Len())
 		case *strings.Reader:
-			this.ContentLength = int64(v.Len())
+			r.ContentLength = int64(v.Len())
 		}
 	}
 }
 
-func (this *Request) WithHeader(key, value string) *Request {
+func (r *Request) WithHeader(key, value string) *Request {
 
-	this.Header.Set(key, value)
+	r.Header.Set(key, value)
 
-	return this
+	return r
 }
 
-func (this *Request) WithBodyString(body string) *Request {
+func (r *Request) WithBodyString(body string) *Request {
 	b := strings.NewReader(body)
-	this.set_body(b)
+	r.set_body(b)
 
-	return this
+	return r
 }
 
-func (this *Request) WithBodyJson(o interface{}) *Request {
+func (r *Request) WithBodyJson(o interface{}) *Request {
 	bytes, err := json.Marshal(o)
 	if nil != err {
 		panic(err)
 	}
 
-	this.WithBodyString(string(bytes))
+	r.WithBodyString(string(bytes))
 
-	return this
+	return r
 }
 
-func (this *Request) Do() *Response {
+func (r *Request) Do() *Response {
 
-	res, err := http.DefaultClient.Do(&this.Request)
+	res, err := http.DefaultClient.Do(&r.Request)
 	if err != nil {
 		panic(err)
 	}
 
-	return &Response{*res}
+	return &Response{Response: *res}
+}
+
+func (r *Request) DoAsync(f func(*Response)) {
+	c := <-r.apitest.clients
+
+	response, err := c.Do(&r.Request)
+	if err != nil {
+		panic(err)
+	}
+	wresponse := &Response{*response, r.apitest, c}
+	f(wresponse)
+
+	wresponse.BodyClose()
+
+	r.apitest.clients <- c
 }

@@ -1,21 +1,43 @@
 package apitest
 
 import (
+	"crypto/tls"
 	"net/http/httptest"
 
-	"github.com/fulldump/golax"
+	"net/http"
 )
 
 type Apitest struct {
-	Api    *golax.Api
-	Server *httptest.Server
+	Handler http.Handler      // handler to test
+	Server  *httptest.Server  // testing server
+	clients chan *http.Client // http clients
 }
 
-func New(api *golax.Api) *Apitest {
-	return &Apitest{
-		Api:    api,
-		Server: httptest.NewServer(api),
+func New(h http.Handler) *Apitest {
+
+	return NewWithPool(h, 2)
+}
+
+func NewWithPool(h http.Handler, n int) *Apitest {
+
+	a := &Apitest{
+		Handler: h,
+		Server:  httptest.NewServer(h),
+		clients: make(chan *http.Client, n),
 	}
+
+	for i := 0; i < cap(a.clients); i++ {
+		a.clients <- &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+				DisableKeepAlives: false,
+			},
+		}
+	}
+
+	return a
 }
 
 func (a *Apitest) Destroy() {
@@ -26,8 +48,10 @@ func (a *Apitest) Destroy() {
 }
 
 func (a *Apitest) Request(method, path string) *Request {
+
 	return NewRequest(
 		method,
-		a.Server.URL+a.Api.Prefix+path,
+		a.Server.URL+path,
+		a,
 	)
 }
