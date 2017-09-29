@@ -96,7 +96,7 @@ func (r *Request) Do() *Response {
 		panic(err)
 	}
 
-	return &Response{Response: *res}
+	return &Response{Response: *res, body_bytes: nil}
 }
 
 func (r *Request) DoAsync(f func(*Response)) {
@@ -106,7 +106,7 @@ func (r *Request) DoAsync(f func(*Response)) {
 	if err != nil {
 		panic(err)
 	}
-	wresponse := &Response{*response, r.apitest, c}
+	wresponse := &Response{*response, r.apitest, c, nil}
 	f(wresponse)
 
 	wresponse.BodyClose()

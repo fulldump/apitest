@@ -1,6 +1,7 @@
 package apitest
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -9,8 +10,9 @@ import (
 
 type Response struct {
 	http.Response
-	apitest *Apitest
-	client  *http.Client
+	apitest    *Apitest
+	client     *http.Client
+	body_bytes []byte
 }
 
 func (r *Response) BodyClose() {
@@ -19,12 +21,20 @@ func (r *Response) BodyClose() {
 }
 
 func (r *Response) BodyBytes() []byte {
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		panic(err)
+
+	if nil == r.body_bytes {
+		body, err := ioutil.ReadAll(r.Body)
+
+		r.body_bytes = body
+
+		if err != nil {
+			panic(err)
+		}
+		r.BodyClose()
+
 	}
-	r.BodyClose()
-	return body
+
+	return r.body_bytes
 }
 
 func (r *Response) BodyString() string {
@@ -32,7 +42,10 @@ func (r *Response) BodyString() string {
 }
 
 func (r *Response) BodyJson() interface{} {
-	d := json.NewDecoder(r.Body)
+
+	b := bytes.NewBuffer(r.BodyBytes())
+
+	d := json.NewDecoder(b)
 	d.UseNumber()
 	var body interface{}
 	if err := d.Decode(&body); err != nil {
@@ -43,7 +56,10 @@ func (r *Response) BodyJson() interface{} {
 }
 
 func (r *Response) BodyJsonMap() *map[string]interface{} {
-	d := json.NewDecoder(r.Body)
+
+	b := bytes.NewBuffer(r.BodyBytes())
+
+	d := json.NewDecoder(b)
 	d.UseNumber()
 	body := map[string]interface{}{}
 	if err := d.Decode(&body); err != nil {
