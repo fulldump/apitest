@@ -91,12 +91,15 @@ func (r *Request) WithBodyJson(o interface{}) *Request {
 
 func (r *Request) Do() *Response {
 
+	tee := &tee{Buffer: r.Request.Body}
+	r.Request.Body = tee
+
 	res, err := http.DefaultClient.Do(&r.Request)
 	if err != nil {
 		panic(err)
 	}
 
-	return &Response{Response: *res, body_bytes: nil}
+	return &Response{Response: *res, response_body_bytes: nil, request_body_bytes: tee.Bytes}
 }
 
 func (r *Request) DoAsync(f func(*Response)) {
@@ -106,10 +109,11 @@ func (r *Request) DoAsync(f func(*Response)) {
 	if err != nil {
 		panic(err)
 	}
-	wresponse := &Response{*response, r.apitest, c, nil}
+	wresponse := &Response{*response, r.apitest, c, nil, nil}
 	f(wresponse)
 
 	wresponse.BodyClose()
 
 	r.apitest.clients <- c
 }
+

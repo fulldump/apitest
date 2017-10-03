@@ -10,9 +10,10 @@ import (
 
 type Response struct {
 	http.Response
-	apitest    *Apitest
-	client     *http.Client
-	body_bytes []byte
+	apitest             *Apitest
+	client              *http.Client
+	response_body_bytes []byte
+	request_body_bytes  []byte
 }
 
 func (r *Response) BodyClose() {
@@ -20,12 +21,20 @@ func (r *Response) BodyClose() {
 	r.Body.Close()
 }
 
+func (r *Response) BodyRequestBytes() []byte {
+	return r.request_body_bytes
+}
+
+func (r *Response) BodyRequestString() string {
+	return string(r.BodyRequestBytes())
+}
+
 func (r *Response) BodyBytes() []byte {
 
-	if nil == r.body_bytes {
+	if nil == r.response_body_bytes {
 		body, err := ioutil.ReadAll(r.Body)
 
-		r.body_bytes = body
+		r.response_body_bytes = body
 
 		if err != nil {
 			panic(err)
@@ -34,7 +43,7 @@ func (r *Response) BodyBytes() []byte {
 
 	}
 
-	return r.body_bytes
+	return r.response_body_bytes
 }
 
 func (r *Response) BodyString() string {
