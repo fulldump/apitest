@@ -10,19 +10,34 @@ import (
 type Apitest struct {
 	Handler http.Handler      // handler to test
 	Server  *httptest.Server  // testing server
+	Base    string            // Base uri to make requests
 	clients chan *http.Client // http clients
 }
 
+// Deprecated: Please, use NewWithHandler instead
 func New(h http.Handler) *Apitest {
 
 	return NewWithPool(h, 2)
 }
 
+func NewWithBase(base string) *Apitest {
+	return &Apitest{
+		Base: base,
+	}
+}
+
+func NewWithHandler(h http.Handler) *Apitest {
+	return NewWithPool(h, 2)
+}
+
 func NewWithPool(h http.Handler, n int) *Apitest {
 
+	s := httptest.NewServer(h)
+
 	a := &Apitest{
+		Base:    s.URL,
 		Handler: h,
-		Server:  httptest.NewServer(h),
+		Server:  s,
 		clients: make(chan *http.Client, n),
 	}
 
@@ -51,7 +66,7 @@ func (a *Apitest) Request(method, path string) *Request {
 
 	return NewRequest(
 		method,
-		a.Server.URL+path,
+		a.Base+path,
 		a,
 	)
 }
