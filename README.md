@@ -1,6 +1,60 @@
 # Apitest
 
-Easy way to test golax apis
+Easy way to test HTTP APIs with more readable and less verbose code.
+
+<table>
+	<tr>
+		<th>With standard library</th>
+		<th>With ApiTest</th>
+	</tr>
+	<tr>
+		<td>
+			<pre lang="go">
+post_body := map[string]interface{}{
+&nbsp;&nbsp;&nbsp;&nbsp;"hello": "World!",
+}
+<br>
+post_json, _ := json.Marshal(post_body)
+// TODO: handle post_json error
+<br>
+post_bytes := bytes.NewBuffer(post_json)
+<br>
+request, _ := http.NewRequest("POST",
+&nbsp;&nbsp;&nbsp;&nbsp;"https://httpbin.org/post", post_bytes)
+request.Header.Set("X-My-Header", "hello")
+// TODO: handle request error
+<br>
+response, _ := http.DefaultClient.Do(request)
+// TODO: handle response error
+<br>
+response_body := map[string]interface{}{}
+<br>
+_ = json.NewDecoder(response.Body).
+&nbsp;&nbsp;&nbsp;&nbsp;Decode(&response_body)
+// TODO: handle response error
+<br>
+fmt.Println("Check response:", response_body)
+			</pre>
+		</td>
+		<td>
+			<pre lang="go">
+a := apitest.NewWithBase("https://httpbin.org")
+<br>
+r := a.Request("POST", "/post").
+&nbsp;&nbsp;&nbsp;&nbsp;WithHeader("X-My-Header", "hello").
+&nbsp;&nbsp;&nbsp;&nbsp;WithBodyJson(map[string]interface{}{
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"hello": "World!",
+&nbsp;&nbsp;&nbsp;&nbsp;}).Do()
+<br>
+response_body := r.BodyJson()
+<br>
+fmt.Println("Check response:", response_body)
+			</pre>
+		</td>
+	</tr>
+</table>
+
+
 
 ## Getting started
 
