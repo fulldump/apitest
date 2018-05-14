@@ -12,6 +12,7 @@ import (
 type Request struct {
 	http.Request
 	apitest *Apitest
+	client *http.Client
 }
 
 func NewRequest(method, urlStr string, a *Apitest) *Request {
@@ -21,7 +22,7 @@ func NewRequest(method, urlStr string, a *Apitest) *Request {
 		panic(err)
 	}
 
-	return &Request{*http_request, a}
+	return &Request{*http_request, a, a.client}
 
 }
 
@@ -89,12 +90,19 @@ func (r *Request) WithBodyJson(o interface{}) *Request {
 	return r
 }
 
+func (r *Request) WithHttpClient(client *http.Client) *Request {
+
+	r.client = client
+
+	return r
+}
+
 func (r *Request) Do() *Response {
 
 	tee := &tee{Buffer: r.Request.Body}
 	r.Request.Body = tee
 
-	res, err := http.DefaultClient.Do(&r.Request)
+	res, err := r.client.Do(&r.Request)
 	if err != nil {
 		panic(err)
 	}
