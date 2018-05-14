@@ -11,6 +11,7 @@ type Apitest struct {
 	Handler http.Handler      // handler to test
 	Server  *httptest.Server  // testing server
 	Base    string            // Base uri to make requests
+	client  *http.Client      // Default Http Client to use in requests
 	clients chan *http.Client // http clients
 }
 
@@ -22,6 +23,7 @@ func New(h http.Handler) *Apitest {
 
 func NewWithBase(base string) *Apitest {
 	return &Apitest{
+		client: http.DefaultClient,
 		Base: base,
 	}
 }
@@ -39,6 +41,7 @@ func NewWithPool(h http.Handler, n int) *Apitest {
 		Handler: h,
 		Server:  s,
 		clients: make(chan *http.Client, n),
+		client: http.DefaultClient,
 	}
 
 	for i := 0; i < cap(a.clients); i++ {
@@ -52,6 +55,16 @@ func NewWithPool(h http.Handler, n int) *Apitest {
 		}
 	}
 
+	return a
+}
+
+func (a *Apitest) WithHttpClient(client *http.Client) *Apitest {
+	a.client = client
+	if a.clients != nil {
+		for i := 0; i < cap(a.clients); i++ {
+			a.clients <- client
+		}
+	}
 	return a
 }
 
