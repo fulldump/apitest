@@ -77,3 +77,17 @@ func (r *Response) BodyJsonMap() *map[string]interface{} {
 	r.BodyClose()
 	return &body
 }
+
+func (r *Response) BodyJsonMapArray() []map[string]interface{} {
+
+	b := bytes.NewBuffer(r.BodyBytes())
+
+	d := json.NewDecoder(b)
+	d.UseNumber()
+	var body []map[string]interface{}
+	if err := d.Decode(&body); err != nil {
+		panic(err)
+	}
+	r.BodyClose()
+	return body
+}
