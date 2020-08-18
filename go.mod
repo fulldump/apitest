@@ -1,3 +1,2 @@
-module apitest
+module github.com/fulldump/apitest
 
-go 1.14
