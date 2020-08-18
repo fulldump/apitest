@@ -45,6 +45,13 @@ func (r *Request) WithCookie(key, value string) *Request {
 	return r
 }
 
+func (r *Request) WithHost(host string) *Request {
+
+	r.Host = host
+
+	return r
+}
+
 func (r *Request) set_body(body io.Reader) {
 
 	rc, ok := body.(io.ReadCloser)
