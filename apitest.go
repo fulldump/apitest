@@ -24,7 +24,7 @@ func New(h http.Handler) *Apitest {
 func NewWithBase(base string) *Apitest {
 	return &Apitest{
 		client: http.DefaultClient,
-		Base: base,
+		Base:   base,
 	}
 }
 
@@ -41,7 +41,7 @@ func NewWithPool(h http.Handler, n int) *Apitest {
 		Handler: h,
 		Server:  s,
 		clients: make(chan *http.Client, n),
-		client: http.DefaultClient,
+		client:  http.DefaultClient,
 	}
 
 	for i := 0; i < cap(a.clients); i++ {
@@ -60,6 +60,7 @@ func NewWithPool(h http.Handler, n int) *Apitest {
 
 func (a *Apitest) WithHttpClient(client *http.Client) *Apitest {
 	a.client = client
+	a.clients = make(chan *http.Client, cap(a.clients))
 	if a.clients != nil {
 		for i := 0; i < cap(a.clients); i++ {
 			a.clients <- client
