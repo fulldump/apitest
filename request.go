@@ -115,15 +115,37 @@ func (r *Request) WithHttpClient(client *http.Client) *Request {
 
 func (r *Request) Do() *Response {
 
-	tee := &tee{Buffer: r.Request.Body}
-	r.Request.Body = tee
+	// Read the body before sending it. Recording it while the transport sends
+	// it raced with the transport's write goroutine, and left the copy short
+	// when the server answered before reading the whole body.
+	body := r.recordBody()
 
 	res, err := r.client.Do(&r.Request)
 	if err != nil {
 		panic(err)
 	}
 
-	return &Response{Response: *res, response_body_bytes: nil, request_body_bytes: tee.Bytes}
+	return &Response{Response: *res, response_body_bytes: nil, request_body_bytes: body}
+}
+
+func (r *Request) recordBody() []byte {
+
+	if r.Body == nil || r.Body == http.NoBody {
+		return nil
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	r.Body.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	r.Body = ioutil.NopCloser(bytes.NewReader(body))
+	r.GetBody = func() (io.ReadCloser, error) {
+		return ioutil.NopCloser(bytes.NewReader(body)), nil
+	}
+
+	return body
 }
 
 func (r *Request) DoAsync(f func(*Response)) {

@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -86,4 +87,26 @@ func Test_Request_Query_Multiple_Combined(t *testing.T) {
 		WithQuery("color", "blue").
 		Do()
 
+}
+
+// A server may answer before reading the request body. The recorded body must
+// still be complete, and recording it must not race with the transport.
+func Test_Request_BodyRecordedWhenServerAnswersEarly(t *testing.T) {
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	// Large enough that the transport is still writing it when the answer
+	// arrives.
+	body := strings.Repeat("x", 8<<20)
+	a := NewWithBase(server.URL)
+	r := a.Request(http.MethodPost, "/path").WithBodyString(body).Do()
+	if r.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d, want %d", r.StatusCode, http.StatusBadRequest)
+	}
+	if have := r.BodyRequestString(); have != body {
+		t.Fatalf("recorded %d request body bytes, want %d", len(have), len(body))
+	}
 }
